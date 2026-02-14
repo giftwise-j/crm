@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sheet Editor</title>
+
+    <script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+
+    <style>
+      :root {
+        --bg: #f8f9fa;
+        --panel: #fff;
+        --line: #e0e0e0;
+        --line-dark: #dadce0;
+        --text: #202124;
+        --muted: #5f6368;
+        --blue: #1a73e8;
+        --green: #188038;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; font: 13px/1.4 Arial, Helvetica, sans-serif; color: var(--text); background: var(--bg); }
+
+      .app { display: grid; grid-template-rows: 48px 40px 40px 1fr; height: 100vh; }
+      .topbar {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line-dark);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+      }
+      .title { font-size: 18px; font-weight: 500; }
+      .top-right { display: flex; align-items: center; gap: 10px; }
+      .user, .status { color: var(--muted); font-size: 12px; }
+      .status.saved { color: var(--green); }
+      .btn {
+        border: 1px solid var(--line-dark);
+        background: #fff;
+        border-radius: 4px;
+        height: 28px;
+        padding: 0 10px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .toolbar {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line-dark);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 12px;
+        color: #3c4043;
+      }
+
+      .formula {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line-dark);
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+      }
+      .name-box, .formula-input {
+        height: 28px;
+        border: 1px solid var(--line-dark);
+        border-radius: 2px;
+      }
+      .name-box { text-align: center; color: #3c4043; background: #fff; }
+      .formula-input { width: 100%; padding: 0 8px; }
+
+      .grid-wrap { overflow: auto; background: var(--panel); }
+
+      table.sheet { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+      .sheet th, .sheet td {
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        height: 28px;
+        min-width: 160px;
+        padding: 0;
+        position: relative;
+      }
+      .sheet .corner, .sheet .col-letter, .sheet .row-num {
+        background: #f8f9fa;
+        color: var(--muted);
+        font-weight: 400;
+        text-align: center;
+        min-width: 52px;
+        width: 52px;
+      }
+      .sheet .row-num {
+        text-align: right;
+        padding-right: 8px;
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        border-right: 1px solid var(--line-dark);
+      }
+      .sheet .corner {
+        position: sticky;
+        left: 0;
+        top: 0;
+        z-index: 5;
+        border-right: 1px solid var(--line-dark);
+      }
+      .sheet .col-letter {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        border-bottom: 1px solid var(--line-dark);
+      }
+
+      .cell {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        outline: none;
+        padding: 0 8px;
+        font: inherit;
+        color: inherit;
+        background: transparent;
+      }
+      .cell.locked { background: #fafafa; color: #5f6368; }
+      .cell.selected { box-shadow: inset 0 0 0 2px var(--blue); z-index: 3; position: relative; }
+      .header-cell { font-weight: 600; }
+      .empty { padding: 20px; color: var(--muted); }
+
+      .auth-gate {
+        position: fixed;
+        inset: 0;
+        background: rgba(248, 249, 250, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      }
+      .auth-card {
+        width: 360px;
+        background: #fff;
+        border: 1px solid var(--line-dark);
+        border-radius: 8px;
+        padding: 18px;
+      }
+      .auth-title { margin: 0 0 8px; font-size: 16px; }
+      .auth-sub { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+      .auth-msg { margin-top: 10px; color: #b3261e; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="topbar">
+        <div class="title">Sheet Editor</div>
+        <div class="top-right">
+          <span id="userLabel" class="user"></span>
+          <button id="switchBtn" class="btn" type="button">Switch account</button>
+          <span id="status" class="status">Initializing...</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <span>File</span><span>Edit</span><span>View</span><span>Insert</span>
+        <span>Format</span><span>Data</span><span>Tools</span><span>Help</span>
+      </div>
+
+      <div class="formula">
+        <input id="nameBox" class="name-box" value="" readonly />
+        <input id="formulaInput" class="formula-input" placeholder="fx" />
+      </div>
+
+      <div class="grid-wrap">
+        <table id="grid" class="sheet"></table>
+      </div>
+    </div>
+
+    <div id="authGate" class="auth-gate">
+      <div class="auth-card">
+        <h3 class="auth-title">Sign in to continue</h3>
+        <p class="auth-sub">Use your Google account. You will only see rows that match your email.</p>
+        <button id="signInBtn" class="btn" type="button">Sign in with Google</button>
+        <div id="authMsg" class="auth-msg"></div>
+      </div>
+    </div>
+
+    <script>
+      const CONFIG = {
+        CLIENT_ID: "REPLACE_WITH_OAUTH_WEB_CLIENT_ID",
+        API_KEY: "REPLACE_WITH_API_KEY",
+        SCRIPT_ID: "REPLACE_WITH_APPS_SCRIPT_ID",
+        DISCOVERY_DOC: "https://script.googleapis.com/$discovery/rest?version=v1",
+        SCOPES: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email"
+      };
+
+      let gapiReady = false;
+      let gisReady = false;
+      let tokenClient = null;
+
+      let state = { headers: [], rows: [], lockedHeaders: [], original: {}, email: "" };
+      let selectedInput = null;
+      let gridState = { rowCount: 0, colCount: 0 };
+
+      let saveTimer = null;
+      let pendingByRow = {};
+      let saveInFlight = false;
+      let saveQueued = false;
+
+      function setStatus(msg, isSaved) {
+        const el = document.getElementById("status");
+        el.textContent = msg || "";
+        el.classList.toggle("saved", !!isSaved);
+      }
+
+      function setAuthMessage(msg) { document.getElementById("authMsg").textContent = msg || ""; }
+      function showAuthGate(msg) { setAuthMessage(msg); document.getElementById("authGate").style.display = "flex"; }
+      function hideAuthGate() { document.getElementById("authGate").style.display = "none"; }
+
+      function configValid() {
+        return !Object.values(CONFIG).some((v) => String(v).includes("REPLACE_WITH"));
+      }
+
+      function gapiLoaded() {
+        gapi.load("client", async () => {
+          try {
+            await gapi.client.init({
+              apiKey: CONFIG.API_KEY,
+              discoveryDocs: [CONFIG.DISCOVERY_DOC]
+            });
+            gapiReady = true;
+            maybeReady();
+          } catch (e) {
+            showAuthGate("Failed to init Google API client.");
+            setStatus("Init failed");
+          }
+        });
+      }
+
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CONFIG.CLIENT_ID,
+          scope: CONFIG.SCOPES,
+          callback: () => {}
+        });
+        gisReady = true;
+        maybeReady();
+      }
+
+      function maybeReady() {
+        if (!configValid()) {
+          showAuthGate("Update CLIENT_ID, API_KEY, and SCRIPT_ID in index.html first.");
+          setStatus("Config required");
+          return;
+        }
+        if (gapiReady && gisReady) {
+          showAuthGate("");
+          setStatus("Please sign in");
+        }
+      }
+
+      function requestAccessToken(promptValue) {
+        return new Promise((resolve, reject) => {
+          tokenClient.callback = (resp) => {
+            if (resp && resp.error) reject(new Error(resp.error));
+            else resolve(resp);
+          };
+          tokenClient.requestAccessToken({ prompt: promptValue || "" });
+        });
+      }
+
+      async function ensureToken(forcePrompt) {
+        if (!gapi.client.getToken()) {
+          await requestAccessToken(forcePrompt ? "consent" : "");
+        }
+      }
+
+      async function signIn() {
+        try {
+          setAuthMessage("");
+          await ensureToken(true);
+          hideAuthGate();
+          await loadData();
+        } catch (e) {
+          showAuthGate("Sign-in failed. Please try again.");
+          setStatus("Sign-in failed");
+        }
+      }
+
+      async function switchAccount() {
+        try {
+          const t = gapi.client.getToken();
+          if (t && t.access_token && window.google && google.accounts && google.accounts.oauth2) {
+            google.accounts.oauth2.revoke(t.access_token, () => {});
+          }
+          gapi.client.setToken(null);
+          document.getElementById("userLabel").textContent = "";
+          showAuthGate("Choose another account.");
+          await requestAccessToken("select_account");
+          hideAuthGate();
+          await loadData();
+        } catch (e) {
+          showAuthGate("Could not switch account.");
+        }
+      }
+
+      async function runScript(functionName, parameters) {
+        await ensureToken(false);
+
+        const resp = await gapi.client.script.scripts.run({
+          scriptId: CONFIG.SCRIPT_ID,
+          resource: { function: functionName, parameters: parameters || [] }
+        });
+
+        if (resp.result && resp.result.error) {
+          const details = resp.result.error.details || [];
+          const msg = details[0] && details[0].errorMessage ? details[0].errorMessage : "Script execution failed";
+          throw new Error(msg);
+        }
+
+        return resp.result && resp.result.response ? resp.result.response.result : null;
+      }
+
+      function isLocked(header) { return state.lockedHeaders.includes(header); }
+
+      function colToLetter(n) {
+        let out = "";
+        while (n > 0) {
+          const rem = (n - 1) % 26;
+          out = String.fromCharCode(65 + rem) + out;
+          n = Math.floor((n - 1) / 26);
+        }
+        return out;
+      }
+
+      async function loadData() {
+        setStatus("Loading...");
+        try {
+          const data = await runScript("apiGetRows", []);
+          render(data || { headers: [], rows: [], lockedHeaders: [], email: "" });
+        } catch (e) {
+          setStatus("Error: " + e.message);
+          showAuthGate(e.message);
+        }
+      }
+
+      async function saveUserRows(updates) {
+        return runScript("apiSaveRows", [updates]);
+      }
+
+      function render(data) {
+        state.headers = data.headers || [];
+        state.rows = data.rows || [];
+        state.lockedHeaders = data.lockedHeaders || [];
+        state.email = data.email || "";
+        state.original = {};
+        selectedInput = null;
+        pendingByRow = {};
+        gridState = { rowCount: state.rows.length, colCount: state.headers.length };
+
+        document.getElementById("userLabel").textContent = state.email || "";
+
+        const table = document.getElementById("grid");
+        table.innerHTML = "";
+
+        if (!state.rows.length) {
+          table.innerHTML = '<tr><td class="empty">No rows found for your email.</td></tr>';
+          setStatus("No rows found");
+          return;
+        }
+
+        const thead = document.createElement("thead");
+        const letters = document.createElement("tr");
+        const corner = document.createElement("th");
+        corner.className = "corner";
+        letters.appendChild(corner);
+
+        state.headers.forEach((_, i) => {
+          const th = document.createElement("th");
+          th.className = "col-letter";
+          th.textContent = colToLetter(i + 1);
+          letters.appendChild(th);
+        });
+        thead.appendChild(letters);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        const hdrTr = document.createElement("tr");
+        const hdrNum = document.createElement("th");
+        hdrNum.className = "row-num";
+        hdrNum.textContent = "1";
+        hdrTr.appendChild(hdrNum);
+
+        state.headers.forEach((h) => {
+          const td = document.createElement("td");
+          const input = document.createElement("input");
+          input.className = "cell header-cell locked";
+          input.value = h;
+          input.readOnly = true;
+          input.tabIndex = -1;
+          td.appendChild(input);
+          hdrTr.appendChild(td);
+        });
+        tbody.appendChild(hdrTr);
+
+        state.rows.forEach((row, rowIdx) => {
+          state.original[row.rowNumber] = Object.assign({}, row.data);
+
+          const tr = document.createElement("tr");
+          const rn = document.createElement("th");
+          rn.className = "row-num";
+          rn.textContent = String(row.rowNumber);
+          tr.appendChild(rn);
+
+          state.headers.forEach((h, colIdx) => {
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+            input.className = "cell";
+            input.value = row.data[h] || "";
+            input.dataset.row = String(row.rowNumber); // actual sheet row
+            input.dataset.r = String(rowIdx + 1); // visual row
+            input.dataset.c = String(colIdx + 1); // visual col
+            input.dataset.header = h;
+
+            if (isLocked(h)) {
+              input.readOnly = true;
+              input.classList.add("locked");
+            }
+
+            input.addEventListener("focus", () => selectCell(input));
+            input.addEventListener("input", () => {
+              if (!input.readOnly) queueChange(input);
+              syncFormulaFromSelection();
+            });
+            input.addEventListener("keydown", handleCellKeydown);
+            input.addEventListener("blur", scheduleAutoSave);
+
+            td.appendChild(input);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        setStatus("All changes saved", true);
+      }
+
+      function selectCell(input) {
+        if (selectedInput) selectedInput.classList.remove("selected");
+        selectedInput = input;
+        selectedInput.classList.add("selected");
+
+        const sheetRow = Number(input.dataset.row);
+        const c = Number(input.dataset.c);
+        document.getElementById("nameBox").value = colToLetter(c) + String(sheetRow);
+        syncFormulaFromSelection();
+      }
+
+      function syncFormulaFromSelection() {
+        const fx = document.getElementById("formulaInput");
+        if (!selectedInput) {
+          fx.value = "";
+          fx.disabled = true;
+          return;
+        }
+        fx.disabled = !!selectedInput.readOnly;
+        fx.value = selectedInput.value || "";
+      }
+
+      function getCellByGrid(r, c) {
+        return document.querySelector('input.cell[data-r="' + r + '"][data-c="' + c + '"]');
+      }
+
+      function selectByGrid(r, c) {
+        const el = getCellByGrid(r, c);
+        if (!el) return;
+        el.focus();
+        el.select();
+      }
+
+      function moveRelative(dr, dc) {
+        if (!selectedInput) return;
+        let r = Number(selectedInput.dataset.r);
+        let c = Number(selectedInput.dataset.c);
+        r = Math.max(1, Math.min(gridState.rowCount, r + dr));
+        c = Math.max(1, Math.min(gridState.colCount, c + dc));
+        selectByGrid(r, c);
+      }
+
+      function moveTab(forward) {
+        if (!selectedInput) return;
+        let r = Number(selectedInput.dataset.r);
+        let c = Number(selectedInput.dataset.c);
+
+        if (forward) {
+          c += 1;
+          if (c > gridState.colCount) {
+            c = 1;
+            r = r < gridState.rowCount ? r + 1 : 1;
+          }
+        } else {
+          c -= 1;
+          if (c < 1) {
+            c = gridState.colCount;
+            r = r > 1 ? r - 1 : gridState.rowCount;
+          }
+        }
+
+        selectByGrid(r, c);
+      }
+
+      function handleCellKeydown(e) {
+        if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+
+        switch (e.key) {
+          case "ArrowUp": e.preventDefault(); moveRelative(-1, 0); break;
+          case "ArrowDown": e.preventDefault(); moveRelative(1, 0); break;
+          case "ArrowLeft": e.preventDefault(); moveRelative(0, -1); break;
+          case "ArrowRight": e.preventDefault(); moveRelative(0, 1); break;
+          case "Enter": e.preventDefault(); moveRelative(e.shiftKey ? -1 : 1, 0); break;
+          case "Tab": e.preventDefault(); moveTab(!e.shiftKey); break;
+        }
+      }
+
+      function queueChange(inputEl) {
+        const row = Number(inputEl.dataset.row);
+        const header = inputEl.dataset.header;
+        const newVal = inputEl.value;
+        const oldVal = String((state.original[row] && state.original[row][header]) || "");
+
+        if (!pendingByRow[row]) pendingByRow[row] = { rowNumber: row, values: {} };
+
+        if (newVal === oldVal) {
+          delete pendingByRow[row].values[header];
+          if (Object.keys(pendingByRow[row].values).length === 0) delete pendingByRow[row];
+        } else {
+          pendingByRow[row].values[header] = newVal;
+        }
+
+        scheduleAutoSave();
+      }
+
+      function scheduleAutoSave() {
+        if (!Object.keys(pendingByRow).length) return;
+        if (saveTimer) clearTimeout(saveTimer);
+        setStatus("Saving...");
+        saveTimer = setTimeout(flushAutoSave, 700);
+      }
+
+      async function flushAutoSave() {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+
+        const updates = Object.values(pendingByRow);
+        if (!updates.length) return;
+
+        if (saveInFlight) {
+          saveQueued = true;
+          return;
+        }
+
+        pendingByRow = {};
+        saveInFlight = true;
+        setStatus("Saving...");
+
+        try {
+          await saveUserRows(updates);
+          applySavedChanges(updates);
+          setStatus("All changes saved", true);
+        } catch (e) {
+          mergeBackPending(updates);
+          setStatus("Save failed: " + e.message);
+        } finally {
+          saveInFlight = false;
+          if (saveQueued) {
+            saveQueued = false;
+            flushAutoSave();
+          }
+        }
+      }
+
+      function applySavedChanges(updates) {
+        updates.forEach((u) => {
+          const row = u.rowNumber;
+          if (!state.original[row]) state.original[row] = {};
+          Object.keys(u.values || {}).forEach((h) => { state.original[row][h] = u.values[h]; });
+        });
+      }
+
+      function mergeBackPending(updates) {
+        updates.forEach((u) => {
+          if (!pendingByRow[u.rowNumber]) pendingByRow[u.rowNumber] = { rowNumber: u.rowNumber, values: {} };
+          Object.assign(pendingByRow[u.rowNumber].values, u.values || {});
+        });
+      }
+
+      function commitFormulaToSelected() {
+        const fx = document.getElementById("formulaInput");
+        if (!selectedInput || selectedInput.readOnly) return;
+        if (selectedInput.value !== fx.value) {
+          selectedInput.value = fx.value;
+          queueChange(selectedInput);
+        }
+      }
+
+      document.getElementById("formulaInput").addEventListener("input", (e) => {
+        if (!selectedInput || selectedInput.readOnly) return;
+        selectedInput.value = e.target.value;
+        queueChange(selectedInput);
+      });
+
+      document.getElementById("formulaInput").addEventListener("keydown", (e) => {
+        if (!selectedInput) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitFormulaToSelected();
+          moveRelative(e.shiftKey ? -1 : 1, 0);
+        } else if (e.key === "Tab") {
+          e.preventDefault();
+          commitFormulaToSelected();
+          moveTab(!e.shiftKey);
+        }
+      });
+
+      document.getElementById("signInBtn").addEventListener("click", signIn);
+      document.getElementById("switchBtn").addEventListener("click", switchAccount);
+
+      window.addEventListener("beforeunload", (e) => {
+        if (saveInFlight || Object.keys(pendingByRow).length > 0) {
+          e.preventDefault();
+          e.returnValue = "";
+        }
+      });
+    </script>
+  </body>
+</html>
