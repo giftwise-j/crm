@@ -5,8 +5,18 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Sheet Editor</title>
 
-    <script src="https://apis.google.com/js/api.js" async defer onload="gapiLoaded()"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer onload="gisLoaded()"></script>
+    <script
+      src="https://apis.google.com/js/api.js"
+      async
+      defer
+      onload="gapiLoaded()"
+    ></script>
+    <script
+      src="https://accounts.google.com/gsi/client"
+      async
+      defer
+      onload="gisLoaded()"
+    ></script>
 
     <style>
       :root {
@@ -19,10 +29,26 @@
         --blue: #1a73e8;
         --green: #188038;
       }
-      * { box-sizing: border-box; }
-      html, body { height: 100%; margin: 0; font: 13px/1.4 Arial, Helvetica, sans-serif; color: var(--text); background: var(--bg); }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font:
+          13px/1.4 Arial,
+          Helvetica,
+          sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
 
-      .app { display: grid; grid-template-rows: 48px 40px 40px 1fr; height: 100vh; }
+      .app {
+        display: grid;
+        grid-template-rows: 48px 40px 40px 1fr;
+        height: 100vh;
+      }
       .topbar {
         background: var(--panel);
         border-bottom: 1px solid var(--line-dark);
@@ -31,10 +57,23 @@
         justify-content: space-between;
         padding: 0 14px;
       }
-      .title { font-size: 18px; font-weight: 500; }
-      .top-right { display: flex; align-items: center; gap: 10px; }
-      .user, .status { color: var(--muted); font-size: 12px; }
-      .status.saved { color: var(--green); }
+      .title {
+        font-size: 18px;
+        font-weight: 500;
+      }
+      .top-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .user,
+      .status {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .status.saved {
+        color: var(--green);
+      }
       .btn {
         border: 1px solid var(--line-dark);
         background: #fff;
@@ -64,18 +103,35 @@
         gap: 8px;
         padding: 6px 10px;
       }
-      .name-box, .formula-input {
+      .name-box,
+      .formula-input {
         height: 28px;
         border: 1px solid var(--line-dark);
         border-radius: 2px;
       }
-      .name-box { text-align: center; color: #3c4043; background: #fff; }
-      .formula-input { width: 100%; padding: 0 8px; }
+      .name-box {
+        text-align: center;
+        color: #3c4043;
+        background: #fff;
+      }
+      .formula-input {
+        width: 100%;
+        padding: 0 8px;
+      }
 
-      .grid-wrap { overflow: auto; background: var(--panel); }
+      .grid-wrap {
+        overflow: auto;
+        background: var(--panel);
+      }
 
-      table.sheet { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
-      .sheet th, .sheet td {
+      table.sheet {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: max-content;
+        min-width: 100%;
+      }
+      .sheet th,
+      .sheet td {
         border-right: 1px solid var(--line);
         border-bottom: 1px solid var(--line);
         height: 28px;
@@ -83,7 +139,9 @@
         padding: 0;
         position: relative;
       }
-      .sheet .corner, .sheet .col-letter, .sheet .row-num {
+      .sheet .corner,
+      .sheet .col-letter,
+      .sheet .row-num {
         background: #f8f9fa;
         color: var(--muted);
         font-weight: 400;
@@ -123,10 +181,22 @@
         color: inherit;
         background: transparent;
       }
-      .cell.locked { background: #fafafa; color: #5f6368; }
-      .cell.selected { box-shadow: inset 0 0 0 2px var(--blue); z-index: 3; position: relative; }
-      .header-cell { font-weight: 600; }
-      .empty { padding: 20px; color: var(--muted); }
+      .cell.locked {
+        background: #fafafa;
+        color: #5f6368;
+      }
+      .cell.selected {
+        box-shadow: inset 0 0 0 2px var(--blue);
+        z-index: 3;
+        position: relative;
+      }
+      .header-cell {
+        font-weight: 600;
+      }
+      .empty {
+        padding: 20px;
+        color: var(--muted);
+      }
 
       .auth-gate {
         position: fixed;
@@ -144,9 +214,20 @@
         border-radius: 8px;
         padding: 18px;
       }
-      .auth-title { margin: 0 0 8px; font-size: 16px; }
-      .auth-sub { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
-      .auth-msg { margin-top: 10px; color: #b3261e; font-size: 12px; }
+      .auth-title {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .auth-sub {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .auth-msg {
+        margin-top: 10px;
+        color: #b3261e;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -155,7 +236,9 @@
         <div class="title">Sheet Editor</div>
         <div class="top-right">
           <span id="userLabel" class="user"></span>
-          <button id="switchBtn" class="btn" type="button">Switch account</button>
+          <button id="switchBtn" class="btn" type="button">
+            Switch account
+          </button>
           <span id="status" class="status">Initializing...</span>
         </div>
       </div>
@@ -178,26 +261,39 @@
     <div id="authGate" class="auth-gate">
       <div class="auth-card">
         <h3 class="auth-title">Sign in to continue</h3>
-        <p class="auth-sub">Use your Google account. You will only see rows that match your email.</p>
-        <button id="signInBtn" class="btn" type="button">Sign in with Google</button>
+        <p class="auth-sub">
+          Use your Google account. You will only see rows that match your email.
+        </p>
+        <button id="signInBtn" class="btn" type="button">
+          Sign in with Google
+        </button>
         <div id="authMsg" class="auth-msg"></div>
       </div>
     </div>
 
     <script>
       const CONFIG = {
-        CLIENT_ID: "601745910254-73gd3evke4vebunmgq58ell66bs3sp5l.apps.googleusercontent.com",
+        CLIENT_ID:
+          "601745910254-73gd3evke4vebunmgq58ell66bs3sp5l.apps.googleusercontent.com",
         API_KEY: "AIzaSyCcDwEXjlfdJQyF89PEJjgRlLx1ZuyBQDE",
         SCRIPT_ID: "1PZnwkpTuJA3NNfu_AGurUcPiD8smVBNcuuub_AChd5QscBoSo7TpAVOC",
-        DISCOVERY_DOC: "https://script.googleapis.com/$discovery/rest?version=v1",
-        SCOPES: "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email"
+        DISCOVERY_DOC:
+          "https://script.googleapis.com/$discovery/rest?version=v1",
+        SCOPES:
+          "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email",
       };
 
       let gapiReady = false;
       let gisReady = false;
       let tokenClient = null;
 
-      let state = { headers: [], rows: [], lockedHeaders: [], original: {}, email: "" };
+      let state = {
+        headers: [],
+        rows: [],
+        lockedHeaders: [],
+        original: {},
+        email: "",
+      };
       let selectedInput = null;
       let gridState = { rowCount: 0, colCount: 0 };
 
@@ -212,12 +308,21 @@
         el.classList.toggle("saved", !!isSaved);
       }
 
-      function setAuthMessage(msg) { document.getElementById("authMsg").textContent = msg || ""; }
-      function showAuthGate(msg) { setAuthMessage(msg); document.getElementById("authGate").style.display = "flex"; }
-      function hideAuthGate() { document.getElementById("authGate").style.display = "none"; }
+      function setAuthMessage(msg) {
+        document.getElementById("authMsg").textContent = msg || "";
+      }
+      function showAuthGate(msg) {
+        setAuthMessage(msg);
+        document.getElementById("authGate").style.display = "flex";
+      }
+      function hideAuthGate() {
+        document.getElementById("authGate").style.display = "none";
+      }
 
       function configValid() {
-        return !Object.values(CONFIG).some((v) => String(v).includes("REPLACE_WITH"));
+        return !Object.values(CONFIG).some((v) =>
+          String(v).includes("REPLACE_WITH"),
+        );
       }
 
       function gapiLoaded() {
@@ -225,7 +330,7 @@
           try {
             await gapi.client.init({
               apiKey: CONFIG.API_KEY,
-              discoveryDocs: [CONFIG.DISCOVERY_DOC]
+              discoveryDocs: [CONFIG.DISCOVERY_DOC],
             });
             gapiReady = true;
             maybeReady();
@@ -240,7 +345,7 @@
         tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: CONFIG.CLIENT_ID,
           scope: CONFIG.SCOPES,
-          callback: () => {}
+          callback: () => {},
         });
         gisReady = true;
         maybeReady();
@@ -248,7 +353,9 @@
 
       function maybeReady() {
         if (!configValid()) {
-          showAuthGate("Update CLIENT_ID, API_KEY, and SCRIPT_ID in index.html first.");
+          showAuthGate(
+            "Update CLIENT_ID, API_KEY, and SCRIPT_ID in index.html first.",
+          );
           setStatus("Config required");
           return;
         }
@@ -261,11 +368,23 @@
       function requestAccessToken(promptValue) {
         return new Promise((resolve, reject) => {
           tokenClient.callback = (resp) => {
-            if (resp && resp.error) reject(new Error(resp.error));
-            else resolve(resp);
+            if (resp && resp.error) {
+              reject(new Error(resp.error));
+              return;
+            }
+            // IMPORTANT: persist token for gapi calls
+            gapi.client.setToken(resp);
+            resolve(resp);
           };
           tokenClient.requestAccessToken({ prompt: promptValue || "" });
         });
+      }
+
+      async function ensureToken(forcePrompt) {
+        // If token already exists, do not pop login again
+        if (gapi.client.getToken() && gapi.client.getToken().access_token)
+          return;
+        await requestAccessToken(forcePrompt ? "consent" : "");
       }
 
       async function ensureToken(forcePrompt) {
@@ -289,7 +408,13 @@
       async function switchAccount() {
         try {
           const t = gapi.client.getToken();
-          if (t && t.access_token && window.google && google.accounts && google.accounts.oauth2) {
+          if (
+            t &&
+            t.access_token &&
+            window.google &&
+            google.accounts &&
+            google.accounts.oauth2
+          ) {
             google.accounts.oauth2.revoke(t.access_token, () => {});
           }
           gapi.client.setToken(null);
@@ -308,19 +433,26 @@
 
         const resp = await gapi.client.script.scripts.run({
           scriptId: CONFIG.SCRIPT_ID,
-          resource: { function: functionName, parameters: parameters || [] }
+          resource: { function: functionName, parameters: parameters || [] },
         });
 
         if (resp.result && resp.result.error) {
           const details = resp.result.error.details || [];
-          const msg = details[0] && details[0].errorMessage ? details[0].errorMessage : "Script execution failed";
+          const msg =
+            details[0] && details[0].errorMessage
+              ? details[0].errorMessage
+              : "Script execution failed";
           throw new Error(msg);
         }
 
-        return resp.result && resp.result.response ? resp.result.response.result : null;
+        return resp.result && resp.result.response
+          ? resp.result.response.result
+          : null;
       }
 
-      function isLocked(header) { return state.lockedHeaders.includes(header); }
+      function isLocked(header) {
+        return state.lockedHeaders.includes(header);
+      }
 
       function colToLetter(n) {
         let out = "";
@@ -336,7 +468,9 @@
         setStatus("Loading...");
         try {
           const data = await runScript("apiGetRows", []);
-          render(data || { headers: [], rows: [], lockedHeaders: [], email: "" });
+          render(
+            data || { headers: [], rows: [], lockedHeaders: [], email: "" },
+          );
         } catch (e) {
           setStatus("Error: " + e.message);
           showAuthGate(e.message);
@@ -355,7 +489,10 @@
         state.original = {};
         selectedInput = null;
         pendingByRow = {};
-        gridState = { rowCount: state.rows.length, colCount: state.headers.length };
+        gridState = {
+          rowCount: state.rows.length,
+          colCount: state.headers.length,
+        };
 
         document.getElementById("userLabel").textContent = state.email || "";
 
@@ -363,7 +500,8 @@
         table.innerHTML = "";
 
         if (!state.rows.length) {
-          table.innerHTML = '<tr><td class="empty">No rows found for your email.</td></tr>';
+          table.innerHTML =
+            '<tr><td class="empty">No rows found for your email.</td></tr>';
           setStatus("No rows found");
           return;
         }
@@ -453,7 +591,8 @@
 
         const sheetRow = Number(input.dataset.row);
         const c = Number(input.dataset.c);
-        document.getElementById("nameBox").value = colToLetter(c) + String(sheetRow);
+        document.getElementById("nameBox").value =
+          colToLetter(c) + String(sheetRow);
         syncFormulaFromSelection();
       }
 
@@ -469,7 +608,9 @@
       }
 
       function getCellByGrid(r, c) {
-        return document.querySelector('input.cell[data-r="' + r + '"][data-c="' + c + '"]');
+        return document.querySelector(
+          'input.cell[data-r="' + r + '"][data-c="' + c + '"]',
+        );
       }
 
       function selectByGrid(r, c) {
@@ -514,12 +655,30 @@
         if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
 
         switch (e.key) {
-          case "ArrowUp": e.preventDefault(); moveRelative(-1, 0); break;
-          case "ArrowDown": e.preventDefault(); moveRelative(1, 0); break;
-          case "ArrowLeft": e.preventDefault(); moveRelative(0, -1); break;
-          case "ArrowRight": e.preventDefault(); moveRelative(0, 1); break;
-          case "Enter": e.preventDefault(); moveRelative(e.shiftKey ? -1 : 1, 0); break;
-          case "Tab": e.preventDefault(); moveTab(!e.shiftKey); break;
+          case "ArrowUp":
+            e.preventDefault();
+            moveRelative(-1, 0);
+            break;
+          case "ArrowDown":
+            e.preventDefault();
+            moveRelative(1, 0);
+            break;
+          case "ArrowLeft":
+            e.preventDefault();
+            moveRelative(0, -1);
+            break;
+          case "ArrowRight":
+            e.preventDefault();
+            moveRelative(0, 1);
+            break;
+          case "Enter":
+            e.preventDefault();
+            moveRelative(e.shiftKey ? -1 : 1, 0);
+            break;
+          case "Tab":
+            e.preventDefault();
+            moveTab(!e.shiftKey);
+            break;
         }
       }
 
@@ -527,13 +686,17 @@
         const row = Number(inputEl.dataset.row);
         const header = inputEl.dataset.header;
         const newVal = inputEl.value;
-        const oldVal = String((state.original[row] && state.original[row][header]) || "");
+        const oldVal = String(
+          (state.original[row] && state.original[row][header]) || "",
+        );
 
-        if (!pendingByRow[row]) pendingByRow[row] = { rowNumber: row, values: {} };
+        if (!pendingByRow[row])
+          pendingByRow[row] = { rowNumber: row, values: {} };
 
         if (newVal === oldVal) {
           delete pendingByRow[row].values[header];
-          if (Object.keys(pendingByRow[row].values).length === 0) delete pendingByRow[row];
+          if (Object.keys(pendingByRow[row].values).length === 0)
+            delete pendingByRow[row];
         } else {
           pendingByRow[row].values[header] = newVal;
         }
@@ -549,7 +712,10 @@
       }
 
       async function flushAutoSave() {
-        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
 
         const updates = Object.values(pendingByRow);
         if (!updates.length) return;
@@ -583,13 +749,16 @@
         updates.forEach((u) => {
           const row = u.rowNumber;
           if (!state.original[row]) state.original[row] = {};
-          Object.keys(u.values || {}).forEach((h) => { state.original[row][h] = u.values[h]; });
+          Object.keys(u.values || {}).forEach((h) => {
+            state.original[row][h] = u.values[h];
+          });
         });
       }
 
       function mergeBackPending(updates) {
         updates.forEach((u) => {
-          if (!pendingByRow[u.rowNumber]) pendingByRow[u.rowNumber] = { rowNumber: u.rowNumber, values: {} };
+          if (!pendingByRow[u.rowNumber])
+            pendingByRow[u.rowNumber] = { rowNumber: u.rowNumber, values: {} };
           Object.assign(pendingByRow[u.rowNumber].values, u.values || {});
         });
       }
@@ -609,21 +778,25 @@
         queueChange(selectedInput);
       });
 
-      document.getElementById("formulaInput").addEventListener("keydown", (e) => {
-        if (!selectedInput) return;
-        if (e.key === "Enter") {
-          e.preventDefault();
-          commitFormulaToSelected();
-          moveRelative(e.shiftKey ? -1 : 1, 0);
-        } else if (e.key === "Tab") {
-          e.preventDefault();
-          commitFormulaToSelected();
-          moveTab(!e.shiftKey);
-        }
-      });
+      document
+        .getElementById("formulaInput")
+        .addEventListener("keydown", (e) => {
+          if (!selectedInput) return;
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitFormulaToSelected();
+            moveRelative(e.shiftKey ? -1 : 1, 0);
+          } else if (e.key === "Tab") {
+            e.preventDefault();
+            commitFormulaToSelected();
+            moveTab(!e.shiftKey);
+          }
+        });
 
       document.getElementById("signInBtn").addEventListener("click", signIn);
-      document.getElementById("switchBtn").addEventListener("click", switchAccount);
+      document
+        .getElementById("switchBtn")
+        .addEventListener("click", switchAccount);
 
       window.addEventListener("beforeunload", (e) => {
         if (saveInFlight || Object.keys(pendingByRow).length > 0) {
