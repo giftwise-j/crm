@@ -381,16 +381,22 @@
       }
 
       async function ensureToken(forcePrompt) {
-        // If token already exists, do not pop login again
-        if (gapi.client.getToken() && gapi.client.getToken().access_token)
-          return;
+        const token = gapi.client.getToken();
+        // If token already exists, do not pop login again.
+        if (token && token.access_token) return;
         await requestAccessToken(forcePrompt ? "consent" : "");
       }
 
-      async function ensureToken(forcePrompt) {
-        if (!gapi.client.getToken()) {
-          await requestAccessToken(forcePrompt ? "consent" : "");
-        }
+      function isAuthErrorMessage(msg) {
+        const m = String(msg || "").toLowerCase();
+        return (
+          m.includes("login") ||
+          m.includes("token") ||
+          m.includes("permission denied") ||
+          m.includes("unauthorized") ||
+          m.includes("insufficient authentication scopes") ||
+          m.includes("authorization")
+        );
       }
 
       async function signIn() {
@@ -472,8 +478,11 @@
             data || { headers: [], rows: [], lockedHeaders: [], email: "" },
           );
         } catch (e) {
-          setStatus("Error: " + e.message);
-          showAuthGate(e.message);
+          const msg = String(e && e.message ? e.message : e);
+          setStatus("Error: " + msg);
+          if (isAuthErrorMessage(msg)) {
+            showAuthGate("Session expired or not authorized. Please sign in.");
+          }
         }
       }
 
